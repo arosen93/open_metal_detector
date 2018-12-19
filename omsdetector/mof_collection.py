@@ -201,13 +201,11 @@ class MofCollection:
             path_list = glob.glob(collection_folder + "/*.cif")
         return cls(path_list, analysis_folder)
 
-    def analyse_mofs(self, overwrite=False, num_batches=1, analysis_limit=None):
+    def analyse_mofs(self, overwrite=False, analysis_limit=None):
         """Run OMS analysis for the MOFs in the collection.
 
         :param overwrite: Controls if the results will be overwritten or not
         (default: False)
-        :param num_batches: Sets the number of batches the structures will be
-        split in and analyzed on a separate process. (default: 1)
         :param analysis_limit: Analyze only up to the number of MOFs set by
         analysis_limit, if set to None all MOFs will be analyzed (default: None)
         """
@@ -217,6 +215,7 @@ class MofCollection:
 
         t0 = time.time()
 
+        num_batches = 1 #hardcoded for single-processors
         self._make_batches(num_batches, overwrite)
 
         for i, batch in enumerate(self.batches):
