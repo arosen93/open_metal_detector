@@ -6,11 +6,9 @@ import time
 import pickle
 import shutil
 import random
-import warnings
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
-from multiprocessing import Process, cpu_count, Array
 from omsdetector.mof import Helper
 from omsdetector.mof import MofStructure
 from omsdetector.atomic_parameters import Atom
@@ -221,33 +219,8 @@ class MofCollection:
 
         self._make_batches(num_batches, overwrite)
 
-        status = Array('i', [0 for i in range(num_batches)])
         for i, batch in enumerate(self.batches):
-            p = Process(target=self._run_batch,
-                        args=(i, batch, overwrite,status))
-            p.start()
-
-        lbs = [len(batch)/100.0 for batch in self.batches]
-        wait_time = 0.0
-        status_prev = [0 for i in range(num_batches)]
-        while True:
-            # Create a list from the shared array to make sure it doesnt change
-            # during the iteration
-            status_ = list(status)
-            if all([sp == s for sp, s in zip(status_prev, status_)]):
-                wait_time = min(25, 0.1+wait_time)
-                time.sleep(wait_time)
-            status_prev = status_
-
-            sout = ["Batch {} Finished.".format(b + 1)
-                    if len(self.batches[b]) == 0 or s < 0 else
-                    "Batch {} {:.2f} % : Analysing {:}"
-                    "".format(b+1, (s+1)/lbs[b], self.batches[b][s]['mof_name'])
-                    for b, s in enumerate(status_)]
-            print("|**| ".join(sout) + 100 * " ", end='\r', flush=True)
-
-            if all([s < 0 for s in status_]):
-                break
+        	self._run_batch(i, batch, overwrite)
 
         if overwrite:
             for mi in self.mof_coll:
@@ -602,12 +575,10 @@ class MofCollection:
                                                           mof_file))
             exit(1)
 
-    def _run_batch(self, b, batch, overwrite, status):
+    def _run_batch(self, b, batch, overwrite):
         """Run OMS analysis for each of the batches."""
         for i, mi in enumerate(batch):
-            status[b] = i
             self._analyse(mi, overwrite)
-        status[b] = -1
 
     def _analyse(self, mi, overwrite):
         """For a given CIF file, create MofStructure object and run OMS
@@ -631,9 +602,6 @@ class MofCollection:
         (default: False)
         """
         print(self.separator)
-        if cpu_count() < num_batches:
-            warnings.warn('You requested {} batches but there are only {}'
-                          ' CPUs available.'.format(num_batches, cpu_count()))
         b_s = {1: 'batch', 2: 'batches'}[min(num_batches, 2)]
         print('{} {} requested. '.format(num_batches, b_s))
         print('Overwrite is set to {}. '.format(overwrite))
